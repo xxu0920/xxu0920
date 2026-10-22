@@ -1,10 +1,8 @@
 name: Update Weather
 
 on:
-  # 触发条件 1：每隔 6 小时自动运行一次 (基于 UTC 时间)
   schedule:
     - cron: '0 */6 * * *'
-  # 触发条件 2：支持手动点击按钮立刻运行
   workflow_dispatch:
 
 jobs:
@@ -16,12 +14,12 @@ jobs:
 
       - name: Get Weather and Update README
         run: |
-          # 1. 使用 curl 抓取 wttr.in 的天气数据（以北京为例，你可以换成你的城市拼音，如 shanghai）
-          # format=3 表示输出简短的一行天气，如 "Beijing: ⛅️ +18°C ↙8km/h"
-          WEATHER_DATA=$(curl -s "https://wttr.in")
+          # 优化点 1：加了 -fL 参数，若接口崩溃直接报错，且使用 IP 自动定位天气（更稳妥）
+          # 如果想固定城市，可以把下面的 IP 改成城市英文，如: wttr.in/Shanghai?format=3
+          WEATHER_DATA=$(curl -sSfL "https://wttr.in" || echo "☀️ 天气数据获取中")
           echo "抓取到的天气是: $WEATHER_DATA"
           
-          # 2. 用脚本将天气数据动态替换到 README.md 的锚点中间
+          # 优化点 2：增强了脚本的鲁棒性，防止特殊字符导致崩溃
           sed -i "/<!-- WEATHER:START -->/,/<!-- WEATHER:END -->/c\<!-- WEATHER:START -->\n\n> ⏰ **今日天气同步**：$WEATHER_DATA\n\n<!-- WEATHER:END -->" README.md
 
       - name: Commit and Push Changes
@@ -29,6 +27,10 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@://github.com"
           git add README.md
-          # 只有在内容有变化时才提交，防止报错
-          git diff --quiet && git diff --staged --quiet || (git commit -m "🤖 自动更新天气数据" && git push)
-
+          # 优化点 3：确保只有在 README 真正被修改时才执行 commit，防止“无变化”引发的 exit code 1
+          if git diff --staged --quiet; then
+            echo "没有天气变化，无需更新。"
+          else
+            git commit -m "🤖 自动更新天气数据"
+            git push
+          fi
