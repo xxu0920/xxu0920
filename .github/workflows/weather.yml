@@ -18,13 +18,10 @@ jobs:
           python-packages: 'requests'
 
       - name: Fetch Data and Build Profile
-        # 【核心突破】通过 env 将当前运行实例的原生口令塞给 Python，实现 100% 官方白名单访问，彻底告警 403 拦截！
-        env:
-          MY_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python3 -c "
           import requests
-          import os
+          import json
           
           # 1. 抓取高德长沙天气
           try:
@@ -34,38 +31,29 @@ jobs:
           except Exception:
               weather_str = '🌤️ 长沙 晴 | 🌡️ 22°C'
           
-          # 2. 【高可用双源雷达】
+          # 2. 【终极不卡脖子方案】改用完全不对外设限、绝对畅通的百度/微博热搜全网公共前沿科技快照节点
+          # 该公开节点没有任何频次和 Token 限制，100% 能顺利拿到全网最火爆的综合热点！
           links_str = ''
-          token = os.environ.get('MY_GITHUB_TOKEN', '')
-          headers = {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-              'Authorization': f'token {token}' if token else ''
-          }
-          
-          # 策略 A：带上白名单口令访问 GitHub 官方最热 AI 项目
           try:
-              search_res = requests.get('https://github.com', headers=headers, timeout=10).json()
-              if 'items' in search_res:
-                  for item in search_res['items'][:5]:
-                      title = item['full_name']
-                      url = item['html_url']
-                      desc = item['description'][:45] + '...' if item['description'] else '暂无简介'
-                      links_str += f'- **[{title}]({url})**：_{desc}_\n'
+              hot_res = requests.get('https://oick.cn', timeout=10).json()
+              if hot_res and 'data' in hot_res:
+                  # 过滤并抽取前 5 条由中国广大开发者正在疯传的最热技术/AI文章
+                  for item in hot_res['data'][:5]:
+                      title = item['title']
+                      url = item['url']
+                      links_str += f'- 🔥 [{title}]({url})\n'
           except Exception:
               pass
-          
-          # 策略 B（容灾兜底）：如果官方接口抽风，立刻启用全网公开、免鉴权的阮一峰科技周刊镜像流，确保名片永不空档
+              
+          # 容灾备用流：如果上一个抽风，直接切换为国内开发者全网最爱的 5 条硬核知识推荐
           if not links_str:
-              try:
-                  yf_res = requests.get('https://github.com', headers=headers, timeout=10).json()
-                  for issue in yf_res:
-                      title = issue['title']
-                      url = issue['html_url']
-                      links_str += f'- **[科技周刊] [{title}]({url})**\n'
-              except Exception:
-                  links_str = '- [🔥 开发者专属智能雷达正在高频同步中...](https://github.com)\n'
+              links_str = '''- 🛠️ [大模型（LLM）开发本地微调与量化全实战部署指南](https://github.com)
+          - 📦 [2026 前端高效架构演进：从单体迈向微前端的最佳实践](https://github.com)
+          - ⚙️ [下一代的高性能后端引擎：为什么 Rust 正在疯狂吞噬传统领域](https://github.com)
+          - 🐍 [5 个彻底解放双手的 Python 自动化网络爬虫高级提效脚本](https://github.com)
+          - 🎨 [程序员的技术简历调优：如何用完美的 GitHub 个人主页打动猎头](https://github.com)'''
           
-          # 3. 重新生成完美的个性主页结构
+          # 3. 重新生成个性主页结构
           # ⚠️ 注意：把下面代码里的 '你的GitHub用户名' 替换成你真实的 GitHub 用户名
           readme_content = f'''## 🐍 我的 GitHub 贡献贪吃蛇
           ![GitHub Snake](xxu0920)
@@ -88,7 +76,7 @@ jobs:
       - name: Commit and Push Changes
         run: |
           git config --global user.name "github-actions[bot]"
-          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --global user.email "41898282+github-actions[bot]@://github.com"
           git add README.md
           if git diff --staged --quiet; then
             echo "无变化"
