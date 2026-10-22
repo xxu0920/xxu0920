@@ -1,9 +1,9 @@
-name: Update Weather
+name: Update Profile Information
 
 on:
   schedule:
-    - cron: '0 */6 * * *' 
-  workflow_dispatch: 
+    - cron: '0 */6 * * *' # 每 6 小时全自动刷新一次
+  workflow_dispatch: # 支持手动点击按钮立刻刷新
 
 jobs:
   update-readme:
@@ -15,23 +15,34 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-packages: 'requests' 
+          python-packages: 'requests'
 
-      - name: Get Changsha Weather and Build README
+      - name: Fetch Data and Build Profile
         run: |
           python3 -c "
           import requests
           
+          # 1. 抓取高德长沙天气
           try:
               res = requests.get('https://amap.com', timeout=10).json()
-              if res['status'] == '1' and res['lives']:
-                  data = res['lives']
-                  weather_str = f'🌤️ {data[\"weather\"]} | 🌡️ {data[\"temperature\"]}°C | 💧 湿度 {data[\"humidity\"]}%'
-              else:
-                  weather_str = '🌤️ 长沙 晴 | 🌡️ 22°C'
+              data = res['lives'][0]
+              weather_str = f'🌤️ {data[\"weather\"]} | 🌡️ {data[\"temperature\"]}°C | 💧 湿度 {data[\"humidity\"]}%'
           except Exception:
               weather_str = '🌤️ 长沙 晴 | 🌡️ 22°C'
           
+          # 2. 抓取全球顶级技术/AI社区 V2EX 的最热技术流（100%不封锁、无403）
+          links_str = ''
+          try:
+              v2_res = requests.get('https://v2ex.com', timeout=10).json()
+              # 只取前 6 条最火的热点科技与 AI 讨论
+              for topic in v2_res[:6]:
+                  title = topic['title']
+                  url = topic['url']
+                  links_str += f'- [{title}]({url})\n'
+          except Exception:
+              links_str = '- [实时 AI 与前沿技术资讯同步中...](https://github.com)\n'
+          
+          # 3. 重新拼装主页，一气呵成
           # ⚠️ 注意：把下面代码里的 '你的GitHub用户名' 替换成你真实的 GitHub 用户名
           readme_content = f'''## 🐍 我的 GitHub 贡献贪吃蛇
           ![GitHub Snake](https://githubusercontent.com)
@@ -43,9 +54,8 @@ jobs:
 
           ---
 
-          ## 🤖 最新技术、AI 学习与 GitHub 趋势项目
-          <!-- BLOG-POST-LIST:START -->
-          <!-- BLOG-POST-LIST:END -->
+          ## 🤖 实时技术、AI 热点与开发者趋势雷达
+          {links_str}
           '''
           
           with open('README.md', 'w', encoding='utf-8') as f:
@@ -58,8 +68,8 @@ jobs:
           git config --global user.email "41898282+github-actions[bot]@://github.com"
           git add README.md
           if git diff --staged --quiet; then
-            echo "无变化"
+            echo "无变化，无需推送"
           else
-            git commit -m "🤖 自动同步最新长沙天气"
+            git commit -m "🤖 全自动化合流更新"
             git push
           fi
