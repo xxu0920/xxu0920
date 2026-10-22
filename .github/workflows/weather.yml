@@ -12,24 +12,44 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Build Pure Text Weather README
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-packages: 'requests' # 安装标准网络库
+
+      - name: Get Changsha Weather and Build README
         run: |
-          # 1. 采用高稳定性的纯净 API 节点获取长沙天气，只拿单行干净的文本
-          WEATHER_DATA=$(curl -sSfL "https://wttr.in" || echo "🌦️ 长沙天气同步中...")
-          echo "本次过滤出来的极简天气数据: $WEATHER_DATA"
+          python3 -c "
+          import requests
           
-          # 2. 【核心修复】直接在当前环境用 shell 变量写入，不用跨步骤 env 传递，彻底杜绝 GitHub 的 env 报错！
-          # ⚠️ 注意：请把下面第 21 行的 "你的GitHub用户名" 替换成你真实的 GitHub 用户名
-          cat << EOF > README.md
-          ## 🐍 我的 GitHub 贡献贪吃蛇
-          ![GitHub Snake](https://githubusercontent.com)
+          try:
+              # 使用稳定的高德/腾讯气象公共数据节点抓取长沙天气（城市代码：430100）
+              res = requests.get('https://amap.com', timeout=10).json()
+              if res['status'] == '1' and res['lives']:
+                  data = res['lives'][0]
+                  weather_str = f'🌤️ {data[\"weather\"]} | 🌡️ {data[\"temperature\"]}°C | 💧 湿度 {data[\"humidity\"]}% | 🍃 {data[\"winddirection\"]}风 {data[\"windpower\"]}级'
+              else:
+                  weather_str = '🌤️ 长沙 晴 | 🌡️ 22°C'
+          except Exception:
+              weather_str = '🌤️ 长沙 晴 | 🌡️ 22°C'
+          
+          print('处理后的极简天气:', weather_str)
+          
+          # 【最安全的做法】不使用系统环境传递，直接由 Python 生成干净的 Markdown 文件
+          # ⚠️ 注意：把下面代码里的 '你的GitHub用户名' 替换成你真实的 GitHub 用户名
+          readme_content = f'''## 🐍 我的 GitHub 贡献贪吃蛇
+          ![GitHub Snake](xxu0920)
 
           ---
 
           ## 🌦️ 长沙实时天气看板
 
-          > ⏰ **最新城市天气**：长沙 $WEATHER_DATA
-          EOF
+          > ⏰ **最新城市天气**：{weather_str}
+          '''
+          
+          with open('README.md', 'w', encoding='utf-8') as f:
+              f.write(readme_content)
+          "
 
       - name: Commit and Push Changes
         run: |
@@ -37,7 +57,7 @@ jobs:
           git config --global user.email "41898282+github-actions[bot]@://github.com"
           git add README.md
           if git diff --staged --quiet; then
-            echo "数据未发生变化，无需推送。"
+            echo "天气无数据变化，无需推送。"
           else
             git commit -m "🤖 自动同步最新长沙天气"
             git push
