@@ -1,8 +1,3 @@
-## 🐍 我的 GitHub 贡献贪吃蛇
-![GitHub Snake](https://githubusercontent.com)
-
----
-
 ## 🌦️ 长沙实时天气看板
 
 > ⏰ **今日天气同步**：Weather report: San Jose, California, US
