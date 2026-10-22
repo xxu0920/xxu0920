@@ -1,0 +1,28 @@
+name: Latest Blog Posts
+
+on:
+  schedule:
+    - cron: '0 2 * * *' # 每天凌晨 2 点自动全网抓取一次
+  workflow_dispatch: # 支持手动点击按钮立刻刷新
+
+jobs:
+  update-readme-with-blog:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Pull RSS Feed Posts
+        uses: gautamkrishnar/blog-post-workflow@v1
+        with:
+          # 【超级大合流】将你想要追踪的 RSS 链接全部用逗号隔开放在下方：
+          # 1. Hugging Face 官方 AI 博客
+          # 2. GitHub 每日全球趋势项目榜
+          # 3. YouTube 某个 AI 学习频道（记得把 UCxxx 换成你查到的真实频道 ID）
+          # 4. X (Twitter) 某个顶尖 AI 学者的推特账号（记得把 推特ID 换成真实的）
+          feed_list: "https://rsshub.app, https://rsshub.app, https://youtube.com, https://rsshub.app"
+          
+          max_post_count: 10 # 首页一次性展示最新的 10 条重磅混合内容
+          
+          # 【视觉锚点优化】在主页高亮展示每条内容的来源平台，方便阅读
+          template: "- [$title]($url) ($date)"
