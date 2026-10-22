@@ -12,27 +12,23 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Get Weather
-        id: weather_step
+      - name: Build Pure Text Weather README
         run: |
-          # 1. 严格过滤：强制指定中国长沙（Changsha），并且只要最干净的单行格式（format=3）
-          # 加了 -sSfL 参数，如果接口再次抽风发图表，直接抓取失败改用备用文字，防止污染主页
+          # 1. 采用高稳定性的纯净 API 节点获取长沙天气，只拿单行干净的文本
           WEATHER_DATA=$(curl -sSfL "https://wttr.in" || echo "🌦️ 长沙天气同步中...")
+          echo "本次过滤出来的极简天气数据: $WEATHER_DATA"
           
-          # 2. 打印在日志里方便我们肉眼检查
-          echo "本次抓取到的单行天气为: $WEATHER_DATA"
-          
-          # 3. 将变量写入 GitHub 的全局环境变量缓存中（这是工业级最安全的做法）
-          echo "WEATHER_INFO=$WEATHER_DATA" >> $GITHUB_ENV
+          # 2. 【核心修复】直接在当前环境用 shell 变量写入，不用跨步骤 env 传递，彻底杜绝 GitHub 的 env 报错！
+          # ⚠️ 注意：请把下面第 21 行的 "你的GitHub用户名" 替换成你真实的 GitHub 用户名
+          cat << EOF > README.md
+          ## 🐍 我的 GitHub 贡献贪吃蛇
+          ![GitHub Snake](https://githubusercontent.com)
 
-      - name: xxu0920
-        run: |
-          # 4. 用最安全的 cat 重新生成 README.md，将环境变量精准注入
-          # ⚠️ 注意：把下面代码里的 "你的GitHub用户名" 替换成你真实的 GitHub 用户名
-          cat << 'EOF' > README.md
+          ---
+
           ## 🌦️ 长沙实时天气看板
 
-          > ⏰ **今日城市天气**：${{ env.WEATHER_INFO }}
+          > ⏰ **最新城市天气**：长沙 $WEATHER_DATA
           EOF
 
       - name: Commit and Push Changes
@@ -43,6 +39,6 @@ jobs:
           if git diff --staged --quiet; then
             echo "数据未发生变化，无需推送。"
           else
-            git commit -m "🤖 自动同步最新长沙天气数据"
+            git commit -m "🤖 自动同步最新长沙天气"
             git push
           fi
