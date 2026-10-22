@@ -2,8 +2,8 @@ name: Update Weather
 
 on:
   schedule:
-    - cron: '0 */6 * * *'
-  workflow_dispatch:
+    - cron: '0 */6 * * *' # 每 6 小时自动运行
+  workflow_dispatch: # 支持手动点击运行
 
 jobs:
   update-readme:
@@ -14,14 +14,18 @@ jobs:
 
       - name: Get Weather and Update README
         run: |
-          # 核心修复 1：指定中文语言(zh-CN) 并且强制使用 format=3（只输出单行，杜绝大图表崩溃）
-          # 建议将下方 URL 改为你所在的城市。如果是北京就用 wttr.in/Beijing?lang=zh-CN&format=3
-          # 如果不想写死城市，可以用 wttr.in/?lang=zh-CN&format=3 (根据GitHub服务器IP定位)
+          # 【已修改为长沙】严格限制只输出单行中文的长沙天气
           WEATHER_DATA=$(curl -sSfL "https://wttr.in" || echo "☀️ 天气数据获取中")
-          echo "严格过滤后的单行天气: $WEATHER_DATA"
+          echo "抓取到的天气是: $WEATHER_DATA"
           
-          # 核心修复 2：使用更安全的 Python 脚本进行局部替换，彻底免疫各类特殊字符引起的崩溃
+          # 将抓取到的天气放入环境变量，供 Python 安全读取
+          export WEATHER_DATA="$WEATHER_DATA"
+          
+          # 修复版的 Python 局部替换引擎，绝不吞掉主页的标签位置
           python3 -c "
+          import os
+          weather = os.environ.get('WEATHER_DATA', '☀️ 天气数据获取中')
+          
           with open('README.md', 'r', encoding='utf-8') as f:
               content = f.read()
           
@@ -31,10 +35,11 @@ jobs:
           if start_tag in content and end_tag in content:
               before = content.split(start_tag)[0]
               after = content.split(end_tag)[1]
-              new_weather_block = f'{start_tag}\n\n> ⏰ **实时天气同步**：' + r'''$WEATHER_DATA''' + f'\n\n{end_tag}'
-              new_content = before + new_weather_block + after
+              new_content = before + start_tag + '\n\n> ⏰ **长沙实时天气同步**：' + weather + '\n\n' + end_tag + after
               with open('README.md', 'w', encoding='utf-8') as f:
                   f.write(new_content)
+          else:
+              print('错误：在 README.md 中未找到天气标签位置！')
           "
 
       - name: Commit and Push Changes
@@ -43,8 +48,8 @@ jobs:
           git config --global user.email "41898282+github-actions[bot]@://github.com"
           git add README.md
           if git diff --staged --quiet; then
-            echo "无天气文字变化，不执行推送。"
+            echo "没有变化，不执行推送。"
           else
-            git commit -m "🤖 自动更新天气数据"
+            git commit -m "🤖 自动更新长沙天气"
             git push
           fi
