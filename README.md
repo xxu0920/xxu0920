@@ -1,5 +1,5 @@
 ## 🐍 我的 GitHub 贡献贪吃蛇
-![GitHub Snake](https://githubusercontent.com)
+![GitHub Snake](xxu0920)
 
 ---
 
@@ -9,5 +9,5 @@
 ---
 
 ## 🤖 实时技术、AI 热点与开发者趋势雷达
-- [⚡ 资讯流雷达正在维护中...](https://github.com)
+- [🔥 开发者专属智能雷达正在高频同步中...](https://github.com)
 
