@@ -2,7 +2,7 @@ name: Update Weather
 
 on:
   schedule:
-    - cron: '0 */6 * * *' # 每 6 小时自动运行
+    - cron: '0 */6 * * *' # 每 6 小时自动跑一次
   workflow_dispatch: # 支持手动点击运行
 
 jobs:
@@ -12,44 +12,33 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Get Weather and Update README
+      - name: Get Weather and Build README
         run: |
-          # 【已修改为长沙】严格限制只输出单行中文的长沙天气
+          # 1. 抓取干净的一行长沙天气
           WEATHER_DATA=$(curl -sSfL "https://wttr.in" || echo "☀️ 天气数据获取中")
-          echo "抓取到的天气是: $WEATHER_DATA"
+          echo "抓取到的长沙天气: $WEATHER_DATA"
           
-          # 将抓取到的天气放入环境变量，供 Python 安全读取
-          export WEATHER_DATA="$WEATHER_DATA"
-          
-          # 修复版的 Python 局部替换引擎，绝不吞掉主页的标签位置
-          python3 -c "
-          import os
-          weather = os.environ.get('WEATHER_DATA', '☀️ 天气数据获取中')
-          
-          with open('README.md', 'r', encoding='utf-8') as f:
-              content = f.read()
-          
-          start_tag = '<!-- WEATHER:START -->'
-          end_tag = '<!-- WEATHER:END -->'
-          
-          if start_tag in content and end_tag in content:
-              before = content.split(start_tag)[0]
-              after = content.split(end_tag)[1]
-              new_content = before + start_tag + '\n\n> ⏰ **长沙实时天气同步**：' + weather + '\n\n' + end_tag + after
-              with open('README.md', 'w', encoding='utf-8') as f:
-                  f.write(new_content)
-          else:
-              print('错误：在 README.md 中未找到天气标签位置！')
-          "
+          # 2. 【最稳固的做法】直接用脚本重新把主页内容重写一遍，绝对不会出现标签找不到的情况
+          # 注意：把下面第 17 行代码里的 "你的GitHub用户名" 替换成你真实的 GitHub 用户名
+          cat << EOF > README.md
+          ## 🐍 我的 GitHub 贡献贪吃蛇
+          ![GitHub Snake](https://githubusercontent.com)
+
+          ---
+
+          ## 🌦️ 长沙实时天气看板
+
+          > ⏰ **今日天气同步**：$WEATHER_DATA
+          EOF
 
       - name: Commit and Push Changes
         run: |
           git config --global user.name "github-actions[bot]"
-          git config --global user.email "41898282+github-actions[bot]@://github.com"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add README.md
           if git diff --staged --quiet; then
-            echo "没有变化，不执行推送。"
+            echo "天气没有变化，无需更新。"
           else
-            git commit -m "🤖 自动更新长沙天气"
+            git commit -m "🤖 自动更新长沙天气看板"
             git push
           fi
